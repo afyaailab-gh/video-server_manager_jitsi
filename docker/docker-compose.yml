@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Jitsi API Server
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - JITSI_HOST=jitsi-web
+      - JITSI_PORT=8443
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+      - jitsi-web
+    networks:
+      - jitsi-network
+
+  # Jitsi Web
+  jitsi-web:
+    image: jitsi/web:stable
+    ports:
+      - "8443:443"
+    volumes:
+      - ~/.jitsi-meet-cfg/web:/config
+    environment:
+      - JITSI_SECRET=${JITSI_SECRET}
+    networks:
+      - jitsi-network
+
+  # Jitsi Prosody (XMPP server)
+  jitsi-prosody:
+    image: jitsi/prosody:stable
+    volumes:
+      - ~/.jitsi-meet-cfg/prosody:/config
+    environment:
+      - JITSI_SECRET=${JITSI_SECRET}
+    networks:
+      - jitsi-network
+
+  # Jitsi Jicofo (conference focus)
+  jitsi-jicofo:
+    image: jitsi/jicofo:stable
+    volumes:
+      - ~/.jitsi-meet-cfg/jicofo:/config
+    environment:
+      - JITSI_SECRET=${JITSI_SECRET}
+    networks:
+      - jitsi-network
+
+  # Jitsi Videobridge (media routing)
+  jitsi-jvb:
+    image: jitsi/jvb:stable
+    ports:
+      - "10000:10000/udp"
+    volumes:
+      - ~/.jitsi-meet-cfg/jvb:/config
+    environment:
+      - JITSI_SECRET=${JITSI_SECRET}
+    networks:
+      - jitsi-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - jitsi-network
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - api
+      - jitsi-web
+    networks:
+      - jitsi-network
+
+volumes:
+  redis-data:
+
+networks:
+  jitsi-network:
+    driver: bridge
