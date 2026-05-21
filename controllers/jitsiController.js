@@ -125,6 +125,29 @@ class JitsiController {
   }
   
   /**
+   * Generate a Jitsi JWT for a patient/doctor without requiring API auth.
+   * Used by the frontend to get a signed token before joining a room.
+   */
+  async generatePublicToken(req, res) {
+    try {
+      const { meetingId, userName, role } = req.body;
+      if (!meetingId || !userName) {
+        return res.status(400).json({ error: 'meetingId and userName are required' });
+      }
+      const roomName = `AfyaCare-${meetingId}`;
+      const token = jitsiService.generateToken(
+        roomName,
+        { id: `${role || 'patient'}-${meetingId}`, name: userName, role: role || 'patient' },
+        role === 'doctor',
+      );
+      res.json({ token, roomName });
+    } catch (error) {
+      logger.error('Error generating public token:', error);
+      res.status(500).json({ error: 'Failed to generate token' });
+    }
+  }
+
+  /**
    * Meeting webhook handler
    */
   async handleWebhook(req, res) {

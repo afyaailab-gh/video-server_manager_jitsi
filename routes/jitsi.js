@@ -9,4 +9,7 @@ router.post('/end-meeting/:roomName', authenticate, authorize(['doctor', 'admin'
 router.get('/meeting-info/:roomName', authenticate, jitsiController.getMeetingInfo);
 router.post('/webhook', jitsiController.handleWebhook);
 
+// Public — no auth required. Frontend calls this to get a Jitsi JWT before joining.
+router.post('/public-token', jitsiController.generatePublicToken);
+
 module.exports = router;
