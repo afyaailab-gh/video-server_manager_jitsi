@@ -12,10 +12,23 @@ const limiter = rateLimit({
 
 // POST /api/livekit/token
 router.post('/token', limiter, async (req, res) => {
-  const { roomName, participantIdentity, participantName } = req.body;
+  // Accept both naming conventions
+  const { 
+    roomName, 
+    participantIdentity,  // Standard field name
+    identity,             // Alternative field name (your frontend sends this)
+    participantName,      // Standard field name
+    name,                 // Alternative field name (your frontend sends this)
+    isDoctor, 
+    meetingId 
+  } = req.body;
 
-  if (!roomName || !participantIdentity) {
-    return res.status(400).json({ error: 'roomName and participantIdentity are required' });
+  // Use either field name
+  const finalIdentity = participantIdentity || identity;
+  const finalParticipantName = participantName || name || 'Participant';
+
+  if (!roomName || !finalIdentity) {
+    return res.status(400).json({ error: 'roomName and participantIdentity/identity are required' });
   }
 
   const wsUrl = process.env.LIVEKIT_URL;
@@ -24,8 +37,13 @@ router.post('/token', limiter, async (req, res) => {
   }
 
   try {
-    const token = await generateLiveKitToken(roomName, participantIdentity, participantName);
-    res.json({ token, url: wsUrl });
+    const token = await generateLiveKitToken(roomName, finalIdentity, finalParticipantName);
+    // Return in the format your frontend expects
+    res.json({ 
+      token, 
+      url: wsUrl,
+      wsUrl: wsUrl  // Send both field names for compatibility
+    });
   } catch (error) {
     logger.error('Error generating LiveKit token:', error);
     res.status(500).json({ error: 'Failed to generate token' });
