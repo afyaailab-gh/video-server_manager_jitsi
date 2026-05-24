@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const jitsiRoutes = require('./routes/jitsi');
 const meetingRoutes = require('./routes/meetings');
+const turnRoutes = require('./routes/turn');
 const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./services/logger');
 
@@ -49,6 +50,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/jitsi', jitsiRoutes);
 app.use('/api/meetings', meetingRoutes);
+app.use('/api/turn', turnRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
