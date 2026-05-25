@@ -10,6 +10,7 @@ const turnRoutes = require('./routes/turn');
 const livekitRoutes = require('./routes/livekit');
 const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./services/logger');
+const notifyRoutes = require('./routes/notify');
 
 const app = express();
 
@@ -53,7 +54,7 @@ app.use('/api/jitsi', jitsiRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/turn', turnRoutes);
 app.use('/api/livekit', livekitRoutes);
-
+app.use('/api/notify', notifyRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
