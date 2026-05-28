@@ -6,19 +6,26 @@ let transporter = null;
 const TIMEOUT_MS = 10000; // 10 s — fail fast instead of hanging
 
 const initTransporter = () => {
-  const emailProvider = process.env.EMAIL_PROVIDER || 'gmail';
+  // Strip inline comments and whitespace (e.g. "gmail  # or sendgrid" → "gmail")
+  const emailProvider = (process.env.EMAIL_PROVIDER || 'gmail').split('#')[0].trim();
+
+  // Support both EMAIL_USER and EMAIL_USERNAME
+  const emailUser = process.env.EMAIL_USER || process.env.EMAIL_USERNAME;
+  const emailPassword = process.env.EMAIL_PASSWORD;
+
+  console.log(`[email] provider="${emailProvider}" user="${emailUser || '(not set)'}"`);
 
   if (emailProvider === 'gmail') {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn('Email not configured: EMAIL_USER / EMAIL_PASSWORD missing. Skipping email send.');
+    if (!emailUser || !emailPassword) {
+      console.warn('Email not configured: EMAIL_USER / EMAIL_USERNAME / EMAIL_PASSWORD missing.');
       transporter = null;
       return;
     }
     transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
+        user: emailUser,
+        pass: emailPassword,
       },
       connectionTimeout: TIMEOUT_MS,
       greetingTimeout: TIMEOUT_MS,
