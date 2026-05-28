@@ -39,11 +39,13 @@ router.post('/participant-joined', async (req, res) => {
 
     logger.info(`Sending participant-joined email for meeting ${meetingId}`);
     const result = await sendParticipantJoinedEmail(emailData);
-    
-    res.json({ 
-      success: true, 
-      messageId: result?.messageId,
-      message: `Notification sent to ${participantType === 'doctor' ? patientName : doctorName}`
+
+    res.json({
+      success: true,
+      messageId: result?.messageId || null,
+      message: result
+        ? `Notification sent to ${participantType === 'doctor' ? patientName : doctorName}`
+        : 'Email not configured — notification skipped',
     });
   } catch (error) {
     logger.error('Error sending participant-joined notification:', error);

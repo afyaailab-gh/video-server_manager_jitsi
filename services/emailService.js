@@ -1,44 +1,58 @@
 // services/emailService.js
 const nodemailer = require('nodemailer');
 
-// Configure email transporter based on your email service
-// Option 1: Gmail (requires App Password)
-// Option 2: SendGrid
-// Option 3: SMTP (any provider)
+let transporter = null;
 
-let transporter;
+const TIMEOUT_MS = 10000; // 10 s — fail fast instead of hanging
 
 const initTransporter = () => {
   const emailProvider = process.env.EMAIL_PROVIDER || 'gmail';
-  
+
   if (emailProvider === 'gmail') {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.warn('Email not configured: EMAIL_USER / EMAIL_PASSWORD missing. Skipping email send.');
+      transporter = null;
+      return;
+    }
     transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD, // Use App Password for Gmail
+        pass: process.env.EMAIL_PASSWORD,
       },
+      connectionTimeout: TIMEOUT_MS,
+      greetingTimeout: TIMEOUT_MS,
+      socketTimeout: TIMEOUT_MS,
     });
   } else if (emailProvider === 'sendgrid') {
+    if (!process.env.SENDGRID_API_KEY) {
+      console.warn('Email not configured: SENDGRID_API_KEY missing. Skipping email send.');
+      transporter = null;
+      return;
+    }
     transporter = nodemailer.createTransport({
       host: 'smtp.sendgrid.net',
       port: 587,
       secure: false,
-      auth: {
-        user: 'apikey',
-        pass: process.env.SENDGRID_API_KEY,
-      },
+      auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
+      connectionTimeout: TIMEOUT_MS,
+      greetingTimeout: TIMEOUT_MS,
+      socketTimeout: TIMEOUT_MS,
     });
   } else {
-    // Custom SMTP
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+      console.warn('Email not configured: SMTP_HOST / SMTP_USER / SMTP_PASSWORD missing. Skipping email send.');
+      transporter = null;
+      return;
+    }
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT) || 587,
       secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+      connectionTimeout: TIMEOUT_MS,
+      greetingTimeout: TIMEOUT_MS,
+      socketTimeout: TIMEOUT_MS,
     });
   }
 };
@@ -56,7 +70,11 @@ const sendParticipantJoinedEmail = async (meetingData) => {
     participantType, // 'doctor' or 'patient'
   } = meetingData;
 
-  if (!transporter) initTransporter();
+  if (transporter === null) initTransporter();
+  if (!transporter) {
+    console.log('Email skipped: no credentials configured.');
+    return null;
+  }
 
   // Determine who should receive the email
   let toEmail, toName, otherName, otherType;
@@ -304,7 +322,11 @@ const sendAppointmentReminder = async (meetingData) => {
     scheduledTime,
   } = meetingData;
 
-  if (!transporter) initTransporter();
+  if (transporter === null) initTransporter();
+  if (!transporter) {
+    console.log('Email skipped: no credentials configured.');
+    return null;
+  }
 
   const scheduledDate = scheduledTime ? new Date(scheduledTime) : null;
   const dateStr = scheduledDate ? scheduledDate.toLocaleDateString('en-US', { 
