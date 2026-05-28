@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   sendParticipantJoinedEmail,
   sendAppointmentReminder,
+  sendConsultationInviteEmail,
 } = require('../services/emailService');
 const logger = require('../services/logger');
 
@@ -209,6 +210,58 @@ router.post('/test', async (req, res) => {
     logger.error('Error sending test email:', error);
     res.status(500).json({
       error: 'Failed to send test email',
+      details: error.message,
+    });
+  }
+});
+
+// POST /api/email/consultation-invite
+router.post('/consultation-invite', async (req, res) => {
+  try {
+    const {
+      meetingId,
+      doctorName,
+      patientName,
+      patientEmail,
+      title,
+      joinLink,
+      durationMinutes,
+      consultationType,
+      consultationPrice,
+    } = req.body;
+
+    if (!meetingId || !doctorName || !patientName || !patientEmail || !title || !joinLink) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['meetingId', 'doctorName', 'patientName', 'patientEmail', 'title', 'joinLink'],
+      });
+    }
+
+    logger.info(`Sending consultation invite for meeting ${meetingId} to ${patientEmail}`);
+
+    const result = await sendConsultationInviteEmail({
+      meetingId,
+      doctorName,
+      patientName,
+      patientEmail,
+      title,
+      joinLink,
+      durationMinutes,
+      consultationType,
+      consultationPrice,
+    });
+
+    res.json({
+      success: true,
+      messageId: result?.messageId || null,
+      message: result
+        ? `Consultation invite sent to ${patientEmail}`
+        : 'Email not configured — invite skipped',
+    });
+  } catch (error) {
+    logger.error('Error sending consultation invite:', error);
+    res.status(500).json({
+      error: 'Failed to send consultation invite',
       details: error.message,
     });
   }

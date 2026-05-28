@@ -489,7 +489,128 @@ const sendAppointmentReminder = async (meetingData) => {
   }
 };
 
+// Send consultation invite to patient
+const sendConsultationInviteEmail = async (meetingData) => {
+  const {
+    meetingId,
+    doctorName,
+    patientName,
+    patientEmail,
+    title,
+    joinLink,
+    durationMinutes,
+    consultationType,
+    consultationPrice,
+  } = meetingData;
+
+  if (transporter === null) initTransporter();
+  if (!transporter) {
+    console.log('Email skipped: no credentials configured.');
+    return null;
+  }
+
+  if (!patientEmail) {
+    console.log('No patient email provided for consultation invite.');
+    return null;
+  }
+
+  const priceStr = consultationPrice != null ? `$${consultationPrice}` : null;
+  const durationStr = durationMinutes ? `${durationMinutes} minutes` : null;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 0; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); padding: 32px 24px; text-align: center; }
+        .header h1 { color: white; margin: 0; font-size: 26px; }
+        .header p { color: rgba(255,255,255,.85); margin: 6px 0 0; font-size: 14px; }
+        .body { padding: 32px 24px; }
+        .greeting { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 12px; }
+        .info-box { background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin: 24px 0; border-radius: 8px; }
+        .info-box p { margin: 5px 0; font-size: 14px; }
+        .info-box strong { color: #065f46; }
+        .btn { display: inline-block; background: #0d9488; color: white; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; margin: 8px 0; }
+        .footer { background: #f9fafb; padding: 20px 24px; text-align: center; font-size: 12px; color: #6b7280; }
+        .divider { border-top: 1px solid #e5e7eb; margin: 24px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <div class="header">
+            <h1>AfyaCare</h1>
+            <p>Your consultation has been scheduled</p>
+          </div>
+          <div class="body">
+            <div class="greeting">Hello ${patientName},</div>
+            <p style="font-size:15px;color:#4b5563;">
+              Dr. <strong>${doctorName}</strong> has invited you to a video consultation on AfyaCare.
+              Please use the link below to join at the scheduled time.
+            </p>
+            <div class="info-box">
+              <p><strong>Consultation:</strong> ${title}</p>
+              ${consultationType ? `<p><strong>Type:</strong> ${consultationType}</p>` : ''}
+              ${durationStr ? `<p><strong>Duration:</strong> ${durationStr}</p>` : ''}
+              ${priceStr ? `<p><strong>Fee:</strong> ${priceStr}</p>` : ''}
+              <p><strong>Meeting ID:</strong> ${meetingId}</p>
+            </div>
+            <div style="text-align:center;margin:24px 0;">
+              <a href="${joinLink}" class="btn">Join Consultation</a>
+            </div>
+            <div class="divider"></div>
+            <p style="font-size:13px;color:#6b7280;">
+              If the button does not work, copy and paste this link into your browser:<br>
+              <a href="${joinLink}" style="color:#0d9488;word-break:break-all;">${joinLink}</a>
+            </p>
+            <p style="font-size:13px;color:#9ca3af;">This is an automated message — please do not reply.</p>
+          </div>
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} AfyaCare. All rights reserved.</p>
+            <p>Secure video consultations for better healthcare.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+Hello ${patientName},
+
+Dr. ${doctorName} has invited you to a video consultation on AfyaCare.
+
+Consultation: ${title}
+${consultationType ? `Type: ${consultationType}\n` : ''}${durationStr ? `Duration: ${durationStr}\n` : ''}${priceStr ? `Fee: ${priceStr}\n` : ''}Meeting ID: ${meetingId}
+
+Join Link: ${joinLink}
+
+© ${new Date().getFullYear()} AfyaCare.
+  `.trim();
+
+  try {
+    const info = await transporter.sendMail({
+      from: `"AfyaCare" <${process.env.EMAIL_FROM || 'noreply@afyacare.com'}>`,
+      to: patientEmail,
+      subject: `Consultation Invite: ${title} with Dr. ${doctorName}`,
+      html,
+      text,
+    });
+    console.log(`Consultation invite sent to ${patientEmail}: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error('Error sending consultation invite:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendParticipantJoinedEmail,
   sendAppointmentReminder,
+  sendConsultationInviteEmail,
 };
