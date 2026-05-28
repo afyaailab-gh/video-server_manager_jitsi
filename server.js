@@ -11,6 +11,7 @@ const livekitRoutes = require('./routes/livekit');
 const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./services/logger');
 const notifyRoutes = require('./routes/notify');
+const emailRoutes = require('./routes/email');
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/meetings', meetingRoutes);
 app.use('/api/turn', turnRoutes);
 app.use('/api/livekit', livekitRoutes);
 app.use('/api/notify', notifyRoutes);
+app.use('/api/email', emailRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
